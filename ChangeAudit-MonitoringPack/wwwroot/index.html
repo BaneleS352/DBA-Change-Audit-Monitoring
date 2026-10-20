@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>DBA Change Audit</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><div><p class="eyebrow">DBA OPERATIONS / CHANGE CONTROL</p><h1>Change Audit<span class="live-dot" aria-hidden="true"></span></h1><p class="subtitle">What changed. Where it lives. Who approved it.</p></div><div class="header-meta"><span class="server">HSB-SYX20-SQL01</span><p id="date">Today · South African time</p><p id="generated">Waiting for monitoring data</p></div></header>
+  <main>
+    <div id="notice" class="notice" role="status">Loading monitoring data…</div>
+    <section class="summary" aria-label="Today's audit summary">
+      <article><span>CHANGES TODAY</span><strong id="count-all">—</strong><p>Captured DDL events</p></article>
+      <article class="green"><span>EVIDENCE LINKED</span><strong id="count-covered">—</strong><p>Master match + release link</p></article>
+      <article class="red"><span>REPOSITORY GAPS</span><strong id="count-repo">—</strong><p>Different or not found</p></article>
+      <article class="red"><span>RAB EXCEPTIONS</span><strong id="count-rab">—</strong><p>Missing / mismatched release evidence</p></article>
+      <article class="amber"><span>REVIEW / PENDING</span><strong id="count-review">—</strong><p>Incomplete or ambiguous evidence</p></article>
+    </section>
+    <section class="health" aria-label="Collection health"><span class="health-title">SOURCE HEALTH</span><span id="health-sql">SQL · waiting</span><span id="health-repo">Master · waiting</span><span id="health-jira">Jira · waiting</span><span id="health-policy">Approvers · DBA review</span></section>
+    <section class="panel">
+      <div class="panel-heading"><div><p class="eyebrow">TODAY'S ACTIVITY</p><h2>Schema changes</h2></div><button id="refresh" type="button">↻ Refresh</button></div>
+      <div class="filters"><label class="search">Search<input id="search" type="search" placeholder="Object, database, login or RAB…"></label><label>Database<select id="database"><option value="">All databases</option></select></label><label>Assessment<select id="status"><option value="">All assessments</option><option value="EvidenceLinked">Evidence linked — verify approval</option><option value="RepositoryException">Repository exception</option><option value="RabException">RAB exception</option><option value="BothExceptions">Both exceptions</option><option value="NeedsReview">Needs review</option><option value="Pending">Pending</option></select></label></div>
+      <div class="table-wrap"><table><thead><tr><th>Time · SAST</th><th>Database / object</th><th>Change</th><th>Executed by</th><th>Recorded approver</th><th>Master</th><th>RAB</th><th>Assessment</th><th><span class="sr-only">Details</span></th></tr></thead><tbody id="events"></tbody></table><p id="empty" class="empty" hidden>No events match these filters.</p></div>
+      <footer><span id="rows">0 changes</span><span>Only today · UTC+02:00 · Counts may overlap</span></footer>
+    </section>
+    <p class="scope">Coverage: CREATE, ALTER and DROP for procedures, tables, functions and views. “Not found” refers to inspected evidence scope. Collection health must be current before relying on an assessment.</p>
+  </main>
+  <dialog id="detail"><div class="detail-header"><div><p class="eyebrow">CHANGE EVIDENCE</p><h2 id="detail-title"></h2></div><button id="close" type="button" aria-label="Close evidence">✕</button></div><p id="detail-meta"></p><div id="detail-verdicts"></div><h3>Repository evidence</h3><div id="repo-evidence"></div><h3>RAB evidence</h3><div id="rab-evidence"></div><h3>Captured SQL</h3><pre id="sql"></pre><p class="scope">Captured SQL is displayed as text. The monitor never executes it.</p></dialog>
+</body></html>
