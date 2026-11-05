@@ -6,6 +6,7 @@ const names = { Matched:'Matches master', Different:'Different SQL', NotFound:'N
 const good = new Set(['Matched']);
 const bad = new Set(['Different','NotFound','NotFoundInScope','ApprovalAfterChange','LoggedAfterChange','OutsideWindow','NotApproved','RepositoryException','RabException','BothExceptions']);
 function node(tag, text, cls) { const e=document.createElement(tag); if(text!==undefined)e.textContent=String(text); if(cls)e.className=cls; return e; }
+function icon(paths, cls) { const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('width','16');svg.setAttribute('height','16');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','2');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');svg.setAttribute('aria-hidden','true');if(cls)svg.setAttribute('class',cls);for(const d of paths){const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',d);svg.append(path);}return svg;}
 function badge(status){return node('span',names[status]||status,'badge '+(good.has(status)?'good':bad.has(status)?'bad':'warn'));}
 function daySast(date=new Date()){return new Date(date.getTime()+7200000).toISOString().slice(0,10);}
 function timeSast(value){return new Intl.DateTimeFormat('en-GB',{timeZone:'Africa/Johannesburg',hour:'2-digit',minute:'2-digit',second:'2-digit'}).format(new Date(value));}
@@ -26,7 +27,8 @@ function render(){
   if(data.latestRun?.Status!=='OK')notices.push('Collector needs attention: '+(data.latestRun?.Status||'no completed run')+'.');
   for(const [key,value]of Object.entries(health)){if(value?.Reason)notices.push(key+': '+value.Reason);}
   if((data.totalToday||0)>(data.events||[]).length)notices.push('Display limit reached: some events are not included in this export.');
-  $('notice').textContent=notices.join(' ')||'Current collection · Master and RAB evidence assessed independently · External sources are read-only';
+  const noticeText=notices.join(' ')||'Current collection · Master and RAB evidence assessed independently · External sources are read-only';
+  $('notice').replaceChildren(node('span',undefined,'notice-indicator'),node('span',noticeText,'notice-copy'));
   $('notice').className='notice '+(stale||state.failed?'error':notices.length?'warn':'');
   for(const [id,key,label]of [['health-sql','Source','SQL'],['health-repo','Repository','Master'],['health-jira','Jira','Jira'],['health-policy','ApprovalPolicy','Approvers']]){const h=health[key]||{};$(id).textContent=label+' · '+(h.Status==='ManualReview'?'DBA review':(h.Status||'unknown'));$(id).className=h.Status==='OK'?'ok':'bad';$(id).title=h.Reason||'';}
   const events=state.events;
@@ -40,7 +42,7 @@ function render(){
   const query=$('search').value.toLowerCase(),db=$('database').value,status=$('status').value;
   const rows=events.filter(e=>(!db||e.DatabaseName===db)&&(!status||e.overallStatus===status)&&JSON.stringify([e.DatabaseName,e.SchemaName,e.ObjectName,e.LoginName,e.evidence?.Rab?.Candidates?.map(c=>c.Key)]).toLowerCase().includes(query));
   $('events').replaceChildren();
-  for(const event of rows){const tr=node('tr');tr.append(node('td',timeSast(event.eventAtUtc)));const object=node('td');object.append(node('span',event.DatabaseName,'db'),node('span',(event.SchemaName?event.SchemaName+'.':'')+event.ObjectName,'object'));tr.append(object,node('td',event.EventType,'event-type'),node('td',event.LoginName));const approvers=[...new Set((event.evidence?.Rab?.Candidates||[]).flatMap(c=>(c.Approval?.Approvers||[]).map(p=>p.Name)))];tr.append(node('td',approvers.join(', ')||'Not recorded'));for(const s of [event.repositoryStatus,event.rabStatus,event.overallStatus]){const td=node('td');td.append(badge(s));tr.append(td);}const td=node('td'),button=node('button','Evidence →');button.type='button';button.addEventListener('click',()=>openDetail(event));td.append(button);tr.append(td);$('events').append(tr);}
+  for(const event of rows){const tr=node('tr');tr.append(node('td',timeSast(event.eventAtUtc)));const object=node('td');object.append(node('span',event.DatabaseName,'db'),node('span',(event.SchemaName?event.SchemaName+'.':'')+event.ObjectName,'object'));tr.append(object,node('td',event.EventType,'event-type'),node('td',event.LoginName));const approvers=[...new Set((event.evidence?.Rab?.Candidates||[]).flatMap(c=>(c.Approval?.Approvers||[]).map(p=>p.Name)))];tr.append(node('td',approvers.join(', ')||'Not recorded'));for(const s of [event.repositoryStatus,event.rabStatus,event.overallStatus]){const td=node('td');td.append(badge(s));tr.append(td);}const td=node('td'),button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','View evidence'),icon(['M5 12h14','m13 6 6 6-6 6']));button.addEventListener('click',()=>openDetail(event));td.append(button);tr.append(td);$('events').append(tr);}
   $('rows').textContent=rows.length+' of '+events.length+' changes';$('empty').hidden=rows.length>0;
 }
 function openDetail(event){
@@ -57,7 +59,7 @@ function openDetail(event){
 async function refresh(){
   $('refresh').disabled=true;
   try{const response=await fetch(demo?'data/demo.json':'data/change-audit.json',{cache:'no-store'});if(!response.ok)throw new Error('HTTP '+response.status);const data=await response.json();if(data.schemaVersion!==1||!Array.isArray(data.events))throw new Error('Invalid snapshot');state.data=data;state.failed=false;if(demo){const now=new Date();data.generatedAtUtc=now.toISOString();data.displayDate=daySast(now);data.events.forEach((e,i)=>e.eventAtUtc=new Date(now.getTime()-(i+1)*600000).toISOString());}render();}
-  catch{state.failed=true;if(state.data)render();else{$('notice').textContent='Monitoring data unavailable. Configure the collector and JSON export. No production results have been loaded.';$('notice').className='notice error';$('empty').hidden=false;$('empty').textContent='Waiting for the first successful collection.';}}
+  catch{state.failed=true;if(state.data)render();else{$('notice').replaceChildren(node('span',undefined,'notice-indicator'),node('span','Monitoring data unavailable. Configure the collector and JSON export. No production results have been loaded.','notice-copy'));$('notice').className='notice error';$('empty').hidden=false;$('empty').textContent='Waiting for the first successful collection.';}}
   finally{$('refresh').disabled=false;}
 }
 for(const id of ['search','database','status'])$(id).addEventListener('input',render);

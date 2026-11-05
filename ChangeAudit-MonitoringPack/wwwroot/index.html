@@ -1,30 +1,173 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DBA Change Audit</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#081426">
+  <title>DBA Change Audit · BET Software</title>
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header><div><p class="eyebrow">DBA OPERATIONS / CHANGE CONTROL</p><h1>Change Audit<span class="live-dot" aria-hidden="true"></span></h1><p class="subtitle">What changed. Where it lives. Who approved it.</p></div><div class="header-meta"><span class="server">HSB-SYX20-SQL01</span><p id="date">Today · South African time</p><p id="generated">Waiting for monitoring data</p></div></header>
-  <main>
-    <div id="notice" class="notice" role="status">Loading monitoring data…</div>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="./" aria-label="BET Software Change Audit home">
+        <img src="bet-logo.png" alt="BET Software" width="260" height="85">
+        <span class="brand-divider" aria-hidden="true"></span>
+        <span class="brand-product">Change Audit</span>
+      </a>
+
+      <div class="header-meta" aria-label="Environment information">
+        <div class="environment">
+          <span class="environment-dot" aria-hidden="true"></span>
+          <span>Production monitor</span>
+        </div>
+        <span class="server">HSB-SYX20-SQL01</span>
+        <div class="header-times">
+          <p id="date">Today · South African time</p>
+          <p id="generated">Waiting for monitoring data</p>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">DBA OPERATIONS <span aria-hidden="true">/</span> CHANGE CONTROL</p>
+        <h1 id="page-title">Database change intelligence</h1>
+        <p class="subtitle">A clear, evidence-led view of what changed, where it lives, and who approved it.</p>
+      </div>
+      <button id="refresh" class="primary-button" type="button">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6v5h-5"></path><path d="M4 18v-5h5"></path><path d="M18.4 9A7 7 0 0 0 6.1 6.1L4 8"></path><path d="M5.6 15A7 7 0 0 0 17.9 17.9L20 16"></path>
+        </svg>
+        <span>Refresh data</span>
+      </button>
+    </section>
+
+    <div id="notice" class="notice" role="status" aria-live="polite">
+      <span class="notice-indicator" aria-hidden="true"></span>
+      <span class="notice-copy">Loading monitoring data…</span>
+    </div>
+
     <section class="summary" aria-label="Today's audit summary">
-      <article><span>CHANGES TODAY</span><strong id="count-all">—</strong><p>Captured DDL events</p></article>
-      <article class="green"><span>EVIDENCE LINKED</span><strong id="count-covered">—</strong><p>Master match + release link</p></article>
-      <article class="red"><span>REPOSITORY GAPS</span><strong id="count-repo">—</strong><p>Different or not found</p></article>
-      <article class="red"><span>RAB EXCEPTIONS</span><strong id="count-rab">—</strong><p>Missing / mismatched release evidence</p></article>
-      <article class="amber"><span>REVIEW / PENDING</span><strong id="count-review">—</strong><p>Incomplete or ambiguous evidence</p></article>
+      <article class="metric metric-primary">
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Changes today</span></div>
+        <strong id="count-all">—</strong>
+        <p>Captured DDL events</p>
+      </article>
+      <article class="metric metric-success">
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Evidence linked</span></div>
+        <strong id="count-covered">—</strong>
+        <p>Master match + release link</p>
+      </article>
+      <article class="metric metric-danger">
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Repository gaps</span></div>
+        <strong id="count-repo">—</strong>
+        <p>Different or not found</p>
+      </article>
+      <article class="metric metric-danger">
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>RAB exceptions</span></div>
+        <strong id="count-rab">—</strong>
+        <p>Missing or mismatched evidence</p>
+      </article>
+      <article class="metric metric-warning">
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Review / pending</span></div>
+        <strong id="count-review">—</strong>
+        <p>Incomplete or ambiguous evidence</p>
+      </article>
     </section>
-    <section class="health" aria-label="Collection health"><span class="health-title">SOURCE HEALTH</span><span id="health-sql">SQL · waiting</span><span id="health-repo">Master · waiting</span><span id="health-jira">Jira · waiting</span><span id="health-policy">Approvers · DBA review</span></section>
-    <section class="panel">
-      <div class="panel-heading"><div><p class="eyebrow">TODAY'S ACTIVITY</p><h2>Schema changes</h2></div><button id="refresh" type="button">↻ Refresh</button></div>
-      <div class="filters"><label class="search">Search<input id="search" type="search" placeholder="Object, database, login or RAB…"></label><label>Database<select id="database"><option value="">All databases</option></select></label><label>Assessment<select id="status"><option value="">All assessments</option><option value="EvidenceLinked">Evidence linked — verify approval</option><option value="RepositoryException">Repository exception</option><option value="RabException">RAB exception</option><option value="BothExceptions">Both exceptions</option><option value="NeedsReview">Needs review</option><option value="Pending">Pending</option></select></label></div>
-      <div class="table-wrap"><table><thead><tr><th>Time · SAST</th><th>Database / object</th><th>Change</th><th>Executed by</th><th>Recorded approver</th><th>Master</th><th>RAB</th><th>Assessment</th><th><span class="sr-only">Details</span></th></tr></thead><tbody id="events"></tbody></table><p id="empty" class="empty" hidden>No events match these filters.</p></div>
-      <footer><span id="rows">0 changes</span><span>Only today · UTC+02:00 · Counts may overlap</span></footer>
+
+    <section class="health" aria-labelledby="health-title">
+      <div class="health-heading">
+        <span class="health-pulse" aria-hidden="true"></span>
+        <div>
+          <p class="eyebrow">MONITORING STATUS</p>
+          <h2 id="health-title">Source health</h2>
+        </div>
+      </div>
+      <div class="health-items">
+        <span id="health-sql">SQL · waiting</span>
+        <span id="health-repo">Master · waiting</span>
+        <span id="health-jira">Jira · waiting</span>
+        <span id="health-policy">Approvers · DBA review</span>
+      </div>
     </section>
+
+    <section class="panel" aria-labelledby="activity-title">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">TODAY'S ACTIVITY</p>
+          <h2 id="activity-title">Schema changes</h2>
+        </div>
+        <div class="panel-context"><span aria-hidden="true"></span>Live evidence workspace</div>
+      </div>
+
+      <div class="filters" aria-label="Filter schema changes">
+        <label class="search">
+          <span>Search</span>
+          <span class="input-shell">
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+            <input id="search" type="search" placeholder="Object, database, login or RAB…">
+          </span>
+        </label>
+        <label>
+          <span>Database</span>
+          <select id="database"><option value="">All databases</option></select>
+        </label>
+        <label>
+          <span>Assessment</span>
+          <select id="status">
+            <option value="">All assessments</option>
+            <option value="EvidenceLinked">Evidence linked — verify approval</option>
+            <option value="RepositoryException">Repository exception</option>
+            <option value="RabException">RAB exception</option>
+            <option value="BothExceptions">Both exceptions</option>
+            <option value="NeedsReview">Needs review</option>
+            <option value="Pending">Pending</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="table-wrap" tabindex="0" aria-label="Scrollable schema change table">
+        <table>
+          <thead><tr><th>Time · SAST</th><th>Database / object</th><th>Change</th><th>Executed by</th><th>Recorded approver</th><th>Master</th><th>RAB</th><th>Assessment</th><th><span class="sr-only">Details</span></th></tr></thead>
+          <tbody id="events"></tbody>
+        </table>
+        <p id="empty" class="empty" hidden>No events match these filters.</p>
+      </div>
+
+      <footer class="panel-footer">
+        <span id="rows">0 changes</span>
+        <span>Only today · UTC+02:00 · Counts may overlap</span>
+      </footer>
+    </section>
+
     <p class="scope">Coverage: CREATE, ALTER and DROP for procedures, tables, functions and views. “Not found” refers to inspected evidence scope. Collection health must be current before relying on an assessment.</p>
   </main>
-  <dialog id="detail"><div class="detail-header"><div><p class="eyebrow">CHANGE EVIDENCE</p><h2 id="detail-title"></h2></div><button id="close" type="button" aria-label="Close evidence">✕</button></div><p id="detail-meta"></p><div id="detail-verdicts"></div><h3>Repository evidence</h3><div id="repo-evidence"></div><h3>RAB evidence</h3><div id="rab-evidence"></div><h3>Captured SQL</h3><pre id="sql"></pre><p class="scope">Captured SQL is displayed as text. The monitor never executes it.</p></dialog>
-</body></html>
+
+  <dialog id="detail" aria-labelledby="detail-title">
+    <div class="detail-header">
+      <div>
+        <p class="eyebrow">CHANGE EVIDENCE</p>
+        <h2 id="detail-title"></h2>
+      </div>
+      <button id="close" class="icon-button" type="button" aria-label="Close evidence">
+        <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+    </div>
+    <p id="detail-meta"></p>
+    <div id="detail-verdicts"></div>
+    <h3>Repository evidence</h3>
+    <div id="repo-evidence"></div>
+    <h3>RAB evidence</h3>
+    <div id="rab-evidence"></div>
+    <h3>Captured SQL</h3>
+    <pre id="sql"></pre>
+    <p class="scope">Captured SQL is displayed as text. The monitor never executes it.</p>
+  </dialog>
+</body>
+</html>

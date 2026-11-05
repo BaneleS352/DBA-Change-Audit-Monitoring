@@ -1,0 +1,87 @@
+I understand this as a production-oriented, read-only DBA investigation tool—not a deployment or approval engine.
+
+The project watches schema-change events captured by:
+
+`HSB-SYX20-SQL01 → DBA.dbo.__schema_change_tracking`
+
+For each event, it tries to answer:
+
+1. What changed, where, when, and under which login?
+2. Does the captured SQL match the current `SSDT_SA` `master` branch?
+3. Is there matching Jira release/RAB evidence?
+4. Does the release evidence identify the right server, database, object, and deployment window?
+5. What approver names, comments, and timestamps were recorded?
+6. Is the result genuinely exceptional, or is the evidence incomplete?
+
+The intended flow is:
+
+```text
+SQL change log
+   + Azure DevOps SSDT_SA master/PRs
+   + Jira release records
+        ↓
+PowerShell collector
+        ↓
+DBA_ChangeAudit central evidence store
+        ↓
+IIS dashboard showing today's SAST activity
+```
+
+The implementation is fairly disciplined:
+
+- It preserves original events and appends assessments.
+- It uses source cursors plus rotating reconciliation to recover late-arriving rows.
+- It detects source resets, conflicting IDs, and cursor failures.
+- It pins repository comparisons to a specific master commit.
+- It compares SQL using ScriptDom and preserves meaningful differences.
+- It keeps repository matching and RAB matching independent.
+- It treats incomplete scans as `Unknown`, rather than falsely reporting “missing”.
+- It displays approvers and comments but intentionally does not decide whether approval was valid.
+- It never executes captured SQL or writes to SQL Server production objects, Git, or Jira.
+- The dashboard explicitly shows that “Evidence linked” means technical evidence only—not “approved”.
+
+The main business outcome you appear to be pursuing is:
+
+> Give DBAs a trustworthy daily queue of production schema changes that may lack repository alignment, release evidence, correct deployment scope, or sufficient evidence—and make the evidence easy to investigate.
+
+You are not merely trying to build a dashboard. You are trying to turn a fragile manual reconciliation process into a supported monitoring service with:
+
+- controlled read-only access,
+- central evidence retention,
+- repeatable collection,
+- clear uncertainty handling,
+- secure IIS access,
+- operational documentation,
+- and a real production canary.
+
+The important boundary is that this is currently a detective/control-support system. It does not prevent unauthorized changes, prove that a change was authorized, provide tamper-proof auditing, or reconstruct missing history.
+
+Current state:
+
+- Implementation pack exists.
+- Offline tests and mocked API/SQL tests are documented.
+- Dashboard and installation/runbook are present.
+- Production SQL permissions, source performance, credentials, Jira completeness, IIS ACLs, and end-to-end live operation are still unverified.
+- `databaseFolderMappings` is empty, so the repository-to-live-database mapping is not yet fully established.
+- The SQL source may be unindexed, and collection intentionally pauses unless the DBA accepts the read cost.
+- The scheduled job is disabled by default.
+
+The sharp questions I would put back to you are:
+
+1. Is your actual goal post-change investigation, or do you eventually expect this to block or prevent unapproved changes?
+
+2. What is the operational success criterion: “every change appears,” “every change is assessed within 15 minutes,” or “DBAs have a reliable investigation queue”?
+
+3. Who owns the final decision when the dashboard says `NeedsReview`, `Unknown`, or `EvidenceLinked`?
+
+4. Which databases on `HSB-SYX20-SQL01` are genuinely in scope, and how will you verify that every one has the expected trigger coverage?
+
+5. What should happen when a change is technically legitimate but has no matching current `master` definition—for example, a migration, hotfix, table alteration, or drop?
+
+6. Are Jira RAB records authoritative enough for your process, or is Jira merely one evidence source among several?
+
+7. Who owns the Azure DevOps/Jira credentials, rotation, API failures, storage retention, and dashboard support?
+
+8. Do you need alerts or integration with DBA Morning Checks, or is a dashboard that DBAs manually inspect sufficient?
+
+My blunt summary: the code is trying to build a cautious evidence-reconciliation service, while the handover request is asking for the organizational work required to make that service trustworthy in production. The biggest remaining gap is not another feature—it is proving the real environment, data coverage, ownership, and operating expectations.
