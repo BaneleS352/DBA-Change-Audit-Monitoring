@@ -3,23 +3,12 @@
   "displayDate": "2026-09-15",
   "generatedAtUtc": "2026-09-15T12:00:00Z",
   "sourceServer": "HSB-SYX20-SQL01",
-  "totalToday": 6,
+  "totalToday": 3,
   "latestRun": {
-    "Status": "Attention",
+    "Status": "OK",
     "health": {
-      "Source": {
-        "Status": "OK"
-      },
-      "Repository": {
-        "Status": "OK"
-      },
-      "Jira": {
-        "Status": "PartialEvidence",
-        "Reason": "Demo: one release needs scope review."
-      },
-      "ApprovalPolicy": {
-        "Status": "ManualReview"
-      }
+      "Source": { "Status": "OK" },
+      "Repository": { "Status": "OK", "Branch": "refs/heads/main", "Commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
     }
   },
   "events": [
@@ -27,45 +16,21 @@
       "EventId": 1,
       "LogId": 101,
       "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "SyX",
+      "DatabaseName": "Affiliates",
       "SchemaName": "dbo",
       "ObjectName": "Example_GetAccount",
+      "ObjectType": "PROCEDURE",
       "EventType": "ALTER_PROCEDURE",
       "LoginName": "DOMAIN\\example.user",
+      "eventAtUtc": "2026-09-15T10:00:00Z",
       "repositoryStatus": "Matched",
-      "rabStatus": "Linked",
-      "overallStatus": "EvidenceLinked",
+      "overallStatus": "RepositoryMatch",
       "sqlCommand": "ALTER PROCEDURE dbo.Example_GetAccount AS\nSELECT 1 AS Example;",
       "evidence": {
         "Repository": {
           "Reason": "Synthetic definition-match example.",
-          "Matches": []
-        },
-        "Rab": {
-          "Reason": "Synthetic release link. Approval validity is verified by the DBA.",
-          "Candidates": [
-            {
-              "Key": "DEMO-1",
-              "Status": "Linked",
-              "Reason": "Synthetic evidence only",
-              "Approval": {
-                "Mode": "ManualReview",
-                "Approvers": [
-                  {
-                    "Name": "Example Approver"
-                  }
-                ],
-                "Comments": [
-                  {
-                    "Author": "Example Reviewer",
-                    "Created": "2026-09-16T08:00:00Z",
-                    "Updated": "2026-09-16T08:00:00Z",
-                    "Text": "Approved"
-                  }
-                ],
-                "CommentsComplete": true
-              }
-            }
+          "Matches": [
+            { "Method": "DefinitionMatch", "Path": "/dbo/Example_GetAccount.sql", "Commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" }
           ]
         }
       }
@@ -74,139 +39,33 @@
       "EventId": 2,
       "LogId": 102,
       "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "Betting",
-      "SchemaName": "resulting",
-      "ObjectName": "Example_UpdateResult",
+      "DatabaseName": "Affiliates",
+      "SchemaName": "dbo",
+      "ObjectName": "Example_UpdateAccount",
+      "ObjectType": "PROCEDURE",
       "EventType": "ALTER_PROCEDURE",
       "LoginName": "DOMAIN\\example.user",
+      "eventAtUtc": "2026-09-15T10:30:00Z",
       "repositoryStatus": "Different",
-      "rabStatus": "Linked",
       "overallStatus": "RepositoryException",
-      "sqlCommand": "-- Synthetic example",
-      "evidence": {
-        "Rab": {
-          "Reason": "Synthetic release link. Approval validity is verified by the DBA.",
-          "Candidates": [
-            {
-              "Key": "DEMO-1",
-              "Status": "Linked",
-              "Reason": "Synthetic evidence only",
-              "Approval": {
-                "Mode": "ManualReview",
-                "Approvers": [
-                  {
-                    "Name": "Example Approver"
-                  }
-                ],
-                "Comments": [
-                  {
-                    "Author": "Example Reviewer",
-                    "Created": "2026-09-16T08:00:00Z",
-                    "Updated": "2026-09-16T08:00:00Z",
-                    "Text": "Approved"
-                  }
-                ],
-                "CommentsComplete": true
-              }
-            }
-          ]
-        }
-      }
+      "sqlCommand": "ALTER PROCEDURE dbo.Example_UpdateAccount AS SELECT 2;",
+      "evidence": { "Repository": { "Reason": "Synthetic SQL difference; inspect captured SQL and the pinned repository commit.", "Matches": [] } }
     },
     {
       "EventId": 3,
       "LogId": 103,
       "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "SyX",
+      "DatabaseName": "Affiliates",
       "SchemaName": "dbo",
-      "ObjectName": "Example_Export",
+      "ObjectName": "Example_NewView",
+      "ObjectType": "VIEW",
       "EventType": "CREATE_VIEW",
       "LoginName": "DOMAIN\\example.user",
-      "repositoryStatus": "Matched",
-      "rabStatus": "Linked",
-      "overallStatus": "EvidenceLinked",
-      "sqlCommand": "-- Synthetic example",
-      "evidence": {
-        "Rab": {
-          "Reason": "Synthetic release link. Approval validity is verified by the DBA.",
-          "Candidates": [
-            {
-              "Key": "DEMO-1",
-              "Status": "Linked",
-              "Reason": "Synthetic evidence only",
-              "Approval": {
-                "Mode": "ManualReview",
-                "Approvers": [
-                  {
-                    "Name": "Example Approver"
-                  }
-                ],
-                "Comments": [
-                  {
-                    "Author": "Example Reviewer",
-                    "Created": "2026-09-16T08:00:00Z",
-                    "Updated": "2026-09-16T08:00:00Z",
-                    "Text": "Approved"
-                  }
-                ],
-                "CommentsComplete": true
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "EventId": 4,
-      "LogId": 104,
-      "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "Betting",
-      "SchemaName": "dbo",
-      "ObjectName": "Example_GetState",
-      "EventType": "CREATE_PROCEDURE",
-      "LoginName": "DOMAIN\\example.user",
-      "repositoryStatus": "NotFound",
-      "rabStatus": "NotFoundInScope",
-      "overallStatus": "BothExceptions",
-      "sqlCommand": "-- Synthetic example"
-    },
-    {
-      "EventId": 5,
-      "LogId": 105,
-      "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "SyX",
-      "SchemaName": "dbo",
-      "ObjectName": "Example_Archive",
-      "EventType": "ALTER_TABLE",
-      "LoginName": "DOMAIN\\example.user",
-      "repositoryStatus": "NeedsReview",
-      "rabStatus": "NeedsReview",
-      "overallStatus": "NeedsReview",
-      "sqlCommand": "-- Synthetic example",
-      "evidence": {
-        "Repository": {
-          "Reason": "ALTER TABLE needs migration evidence.",
-          "Matches": []
-        },
-        "Rab": {
-          "Reason": "Target server differs from the monitored server.",
-          "Candidates": []
-        }
-      }
-    },
-    {
-      "EventId": 6,
-      "LogId": 106,
-      "ServerName": "HSB-SYX20-SQL01",
-      "DatabaseName": "Betting",
-      "SchemaName": "dbo",
-      "ObjectName": "Example_Calculate",
-      "EventType": "ALTER_FUNCTION",
-      "LoginName": "DOMAIN\\example.user",
+      "eventAtUtc": "2026-09-15T11:00:00Z",
       "repositoryStatus": "Unknown",
-      "rabStatus": "Unknown",
-      "overallStatus": "Pending",
-      "sqlCommand": "-- Synthetic example"
+      "overallStatus": "NeedsReview",
+      "sqlCommand": "CREATE VIEW dbo.Example_NewView AS SELECT 3 AS Example;",
+      "evidence": { "Repository": { "Reason": "Synthetic incomplete repository scan; absence cannot be determined.", "Matches": [] } }
     }
   ]
 }

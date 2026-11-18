@@ -1,5 +1,7 @@
 # Project request and handover: DBA Change Audit
 
+**Current implementation phase (2026-11-16):** The active collector/dashboard is scoped to SQL changes for `Affiliates`, compared with [Affiliates.Database `main`](https://dev.azure.com/BETSoftwareO365/Affiliates/_git/Affiliates.Database). RAB/Jira lookup is deferred. The earlier SSDT_SA/Jira requirements below are historical and superseded for this phase; see [README.md](README.md) and [RUNBOOK.md](RUNBOOK.md) for the active configuration.
+
 **Prepared:** 19 October 2026  
 **Requested outcome:** Take ownership of the existing implementation, complete technical review and live validation, and deliver a supported monitoring service for the DBA team.  
 **Current stage:** Implementation and installation pack prepared; offline validation recorded. Production installation and end-to-end operation are not confirmed.

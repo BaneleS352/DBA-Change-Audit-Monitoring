@@ -173,12 +173,12 @@ function Compare-RepositoryEvidence($Event, $Artifacts, [bool]$Complete) {
             if ($method) { $matches += [pscustomobject]@{ Path = $artifact.Path; Commit = $artifact.Commit; Method = $method; ContentHash = $artifact.ContentHash } }
         }
     }
-    if ($matches.Count -gt 0) { return @{ Status = 'Matched'; Reason = 'Matches current pinned master content; historical deployment provenance assessed separately'; Matches = $matches } }
-    if (-not $Complete) { return @{ Status = 'Unknown'; Reason = 'Repository scope not fully fetched'; Matches = @() } }
+    if ($matches.Count -gt 0) { return @{ Status = 'Matched'; Reason = 'Matches content at the pinned configured branch commit; historical deployment provenance is not established'; Matches = $matches } }
+    if (-not $Complete) { return @{ Status = 'Unknown'; Reason = 'Repository scope not fully fetched'; Matches = @(); CandidatePaths = @($candidates | Sort-Object -Unique) } }
     if ($unsupported -or $contextMismatch -or $obj.Operation -eq 'DROP' -or ($obj.ObjectType -eq 'TABLE' -and $obj.Operation -eq 'ALTER')) {
-        return @{ Status = 'NeedsReview'; Reason = 'Unsupported scripts or deployment operation needs migration evidence'; Matches = @() }
+        return @{ Status = 'NeedsReview'; Reason = 'Unsupported scripts or deployment operation needs migration evidence'; Matches = @(); CandidatePaths = @($candidates | Sort-Object -Unique) }
     }
-    if ($candidates.Count) { return @{ Status = 'Different'; Reason = 'Object found, but supported SQL/context does not match'; Matches = @() } }
+    if ($candidates.Count) { return @{ Status = 'Different'; Reason = 'Object found, but supported SQL/context does not match'; Matches = @(); CandidatePaths = @($candidates | Sort-Object -Unique) } }
     return @{ Status = 'NotFound'; Reason = 'Object not found in the completely read mapped folder'; Matches = @() }
 }
 

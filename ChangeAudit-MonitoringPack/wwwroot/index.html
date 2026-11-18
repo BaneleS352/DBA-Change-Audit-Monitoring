@@ -38,7 +38,7 @@
       <div>
         <p class="eyebrow">DBA OPERATIONS <span aria-hidden="true">/</span> CHANGE CONTROL</p>
         <h1 id="page-title">Database change intelligence</h1>
-        <p class="subtitle">A clear, evidence-led view of what changed, where it lives, and who approved it.</p>
+        <p class="subtitle">Compare every captured Affiliates database change with its SQL definition in Azure DevOps.</p>
       </div>
       <button id="refresh" class="primary-button" type="button">
         <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -53,26 +53,21 @@
       <span class="notice-copy">Loading monitoring data…</span>
     </div>
 
-    <section class="summary" aria-label="Today's audit summary">
+    <section class="summary" aria-label="Today's repository comparison summary">
       <article class="metric metric-primary">
         <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Changes today</span></div>
         <strong id="count-all">—</strong>
         <p>Captured DDL events</p>
       </article>
       <article class="metric metric-success">
-        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Evidence linked</span></div>
-        <strong id="count-covered">—</strong>
-        <p>Master match + release link</p>
+        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Repository matches</span></div>
+        <strong id="count-matched">—</strong>
+        <p>Captured SQL matches main</p>
       </article>
       <article class="metric metric-danger">
         <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Repository gaps</span></div>
         <strong id="count-repo">—</strong>
         <p>Different or not found</p>
-      </article>
-      <article class="metric metric-danger">
-        <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>RAB exceptions</span></div>
-        <strong id="count-rab">—</strong>
-        <p>Missing or mismatched evidence</p>
       </article>
       <article class="metric metric-warning">
         <div class="metric-label"><span class="metric-icon" aria-hidden="true"></span><span>Review / pending</span></div>
@@ -91,9 +86,7 @@
       </div>
       <div class="health-items">
         <span id="health-sql">SQL · waiting</span>
-        <span id="health-repo">Master · waiting</span>
-        <span id="health-jira">Jira · waiting</span>
-        <span id="health-policy">Approvers · DBA review</span>
+        <span id="health-repo">Azure DevOps · waiting</span>
       </div>
     </section>
 
@@ -111,7 +104,7 @@
           <span>Search</span>
           <span class="input-shell">
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
-            <input id="search" type="search" placeholder="Object, database, login or RAB…">
+            <input id="search" type="search" placeholder="Database, schema, object or login…">
           </span>
         </label>
         <label>
@@ -122,10 +115,8 @@
           <span>Assessment</span>
           <select id="status">
             <option value="">All assessments</option>
-            <option value="EvidenceLinked">Evidence linked — verify approval</option>
+            <option value="RepositoryMatch">Repository match</option>
             <option value="RepositoryException">Repository exception</option>
-            <option value="RabException">RAB exception</option>
-            <option value="BothExceptions">Both exceptions</option>
             <option value="NeedsReview">Needs review</option>
             <option value="Pending">Pending</option>
           </select>
@@ -134,7 +125,7 @@
 
       <div class="table-wrap" tabindex="0" aria-label="Scrollable schema change table">
         <table>
-          <thead><tr><th>Time · SAST</th><th>Database / object</th><th>Change</th><th>Executed by</th><th>Recorded approver</th><th>Master</th><th>RAB</th><th>Assessment</th><th><span class="sr-only">Details</span></th></tr></thead>
+          <thead><tr><th>Time · SAST</th><th>Log ID</th><th>Database / object</th><th>Object type</th><th>Change</th><th>Executed by</th><th>Repository</th><th>Assessment</th><th><span class="sr-only">Details</span></th></tr></thead>
           <tbody id="events"></tbody>
         </table>
         <p id="empty" class="empty" hidden>No events match these filters.</p>
@@ -146,7 +137,7 @@
       </footer>
     </section>
 
-    <p class="scope">Coverage: CREATE, ALTER and DROP for procedures, tables, functions and views. “Not found” refers to inspected evidence scope. Collection health must be current before relying on an assessment.</p>
+    <p class="scope">Coverage: CREATE, ALTER and DROP for procedures, tables, functions and views. “Not found” refers to the inspected Affiliates SQL scope. Collection health must be current before relying on an assessment.</p>
   </main>
 
   <dialog id="detail" aria-labelledby="detail-title">
@@ -163,8 +154,6 @@
     <div id="detail-verdicts"></div>
     <h3>Repository evidence</h3>
     <div id="repo-evidence"></div>
-    <h3>RAB evidence</h3>
-    <div id="rab-evidence"></div>
     <h3>Captured SQL</h3>
     <pre id="sql"></pre>
     <p class="scope">Captured SQL is displayed as text. The monitor never executes it.</p>

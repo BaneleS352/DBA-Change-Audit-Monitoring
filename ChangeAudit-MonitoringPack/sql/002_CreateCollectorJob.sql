@@ -11,7 +11,7 @@ DECLARE @JobId uniqueidentifier;
 IF EXISTS(SELECT 1 FROM dbo.sysjobs WHERE name=@JobName)
     THROW 51000, 'Job already exists. Review its configuration rather than overwriting it.', 1;
 EXEC dbo.sp_add_job @job_name=@JobName,@enabled=0,
-    @description=N'Reads SQL01 schema events, Azure DevOps master and Jira releases. Writes only central monitoring evidence and IIS JSON.',@job_id=@JobId OUTPUT;
+    @description=N'Reads SQL01 schema events and the configured Azure DevOps repository. Writes only central monitoring evidence and IIS JSON.',@job_id=@JobId OUTPUT;
 EXEC dbo.sp_add_jobstep @job_id=@JobId,@step_name=N'Collect and reconcile evidence',@subsystem=N'CmdExec',
     @command=@Command,@proxy_name=@ProxyName,@retry_attempts=0,@on_success_action=1,@on_fail_action=2;
 EXEC dbo.sp_add_jobschedule @job_id=@JobId,@name=@ScheduleName,@enabled=1,

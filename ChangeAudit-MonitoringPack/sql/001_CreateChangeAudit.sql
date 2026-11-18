@@ -127,12 +127,14 @@ BEGIN
 END;
 GO
 CREATE OR ALTER PROCEDURE dbo.usp_ReadToday
-    @StartUtc datetime2(3), @EndUtc datetime2(3), @Limit int=10000
+    @StartUtc datetime2(3), @EndUtc datetime2(3), @Limit int=10000, @DatabaseName nvarchar(256)=NULL
 AS
 BEGIN
     SET NOCOUNT ON;
     SELECT TOP(@Limit) * FROM dbo.ChangeEvent
-    WHERE EventAtUtc>=@StartUtc AND EventAtUtc<@EndUtc ORDER BY EventAtUtc, EventId;
+    WHERE EventAtUtc>=@StartUtc AND EventAtUtc<@EndUtc
+      AND (@DatabaseName IS NULL OR DatabaseName=@DatabaseName)
+    ORDER BY EventAtUtc, EventId;
 END;
 GO
 CREATE OR ALTER PROCEDURE dbo.usp_CompleteRun
@@ -157,7 +159,7 @@ BEGIN
     END CATCH
 END;
 GO
-CREATE OR ALTER PROCEDURE dbo.usp_DashboardJson AS
+CREATE OR ALTER PROCEDURE dbo.usp_DashboardJson @DatabaseName nvarchar(256)=NULL AS
 BEGIN
     SET NOCOUNT ON;
     DECLARE @Date date=CONVERT(date,DATEADD(hour,2,SYSUTCDATETIME()));
@@ -168,15 +170,17 @@ BEGIN
             N'HSB-SYX20-SQL01' AS sourceServer,
             JSON_QUERY((SELECT TOP(1) RunId,Status,StartedAtUtc,CompletedAtUtc,JSON_QUERY(HealthJson) AS health
                 FROM dbo.AuditRun ORDER BY RunId DESC FOR JSON PATH, WITHOUT_ARRAY_WRAPPER)) AS latestRun,
-            (SELECT COUNT_BIG(*) FROM dbo.ChangeEvent WHERE EventAtUtc>=@Start AND EventAtUtc<DATEADD(day,1,@Start)) AS totalToday,
-            JSON_QUERY((SELECT TOP(10000) e.EventId,e.LogId,e.ServerName,e.DatabaseName,e.SchemaName,e.ObjectName,e.EventType,e.LoginName,
+            (SELECT COUNT_BIG(*) FROM dbo.ChangeEvent WHERE EventAtUtc>=@Start AND EventAtUtc<DATEADD(day,1,@Start)
+                AND (@DatabaseName IS NULL OR DatabaseName=@DatabaseName)) AS totalToday,
+            JSON_QUERY((SELECT TOP(10000) e.EventId,e.LogId,e.ServerName,e.DatabaseName,e.SchemaName,e.ObjectName,e.ObjectType,e.EventType,e.LoginName,
                 CONVERT(varchar(33),e.EventAtUtc,126)+'Z' AS eventAtUtc,
-                ISNULL(a.RepositoryStatus,N'NotAssessed') AS repositoryStatus, ISNULL(a.RabStatus,N'NotAssessed') AS rabStatus,
+                ISNULL(a.RepositoryStatus,N'NotAssessed') AS repositoryStatus,
                 ISNULL(a.OverallStatus,N'NeedsReview') AS overallStatus,
                 JSON_QUERY(a.EvidenceJson) AS evidence, e.SqlCommand AS sqlCommand
                 FROM dbo.ChangeEvent e
                 OUTER APPLY(SELECT TOP(1) * FROM dbo.Assessment a WHERE a.EventId=e.EventId ORDER BY a.AssessmentId DESC) a
                 WHERE e.EventAtUtc>=@Start AND e.EventAtUtc<DATEADD(day,1,@Start)
+                  AND (@DatabaseName IS NULL OR e.DatabaseName=@DatabaseName)
                 ORDER BY e.EventAtUtc DESC,e.EventId DESC FOR JSON PATH)) AS events
         FOR JSON PATH,WITHOUT_ARRAY_WRAPPER
     ) AS DashboardJson;

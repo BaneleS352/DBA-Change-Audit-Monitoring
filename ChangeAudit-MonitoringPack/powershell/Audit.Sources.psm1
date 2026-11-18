@@ -5,19 +5,17 @@ $ErrorActionPreference = 'Stop'
 function New-ReadHeaders([string]$SecretPath) {
     if (-not (Test-Path -LiteralPath $SecretPath)) { throw 'API credential file missing. Run Initialize-AuditCredentials.ps1 as the collector identity on its host.' }
     $secrets = Import-Clixml -LiteralPath $SecretPath
-    if ($secrets.AzurePat -isnot [Management.Automation.PSCredential] -or $secrets.Jira -isnot [Management.Automation.PSCredential]) { throw 'Invalid credential file' }
+    if ($secrets.AzurePat -isnot [Management.Automation.PSCredential]) { throw 'Invalid credential file' }
     $az = ':' + $secrets.AzurePat.GetNetworkCredential().Password
-    $jira = $secrets.Jira.UserName + ':' + $secrets.Jira.GetNetworkCredential().Password
     return @{
         Azure = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($az)); Accept = 'application/json' }
-        Jira = @{ Authorization = 'Basic ' + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($jira)); Accept = 'application/json' }
     }
 }
 
 function Invoke-ReadApi([string]$Uri, [hashtable]$Headers) {
-    # All external operations in this module are GETs to these two configured services.
+    # The collector only permits HTTPS GET requests to Azure DevOps.
     $target = [uri]$Uri
-    if ($target.Scheme -ne 'https' -or $target.Host -notin @('dev.azure.com','betsoftware.atlassian.net')) { throw 'Unexpected API destination' }
+    if ($target.Scheme -ne 'https' -or $target.Host -cne 'dev.azure.com') { throw 'Unexpected API destination' }
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
     for ($attempt = 0; $attempt -lt 3; $attempt++) {
         try { return Invoke-RestMethod -Uri $Uri -Headers $Headers -Method Get -TimeoutSec 30 -MaximumRedirection 0 }
@@ -47,13 +45,29 @@ function Write-AtomicJson([string]$Path, $Value) {
     } finally { if ([IO.File]::Exists($temporary)) { [IO.File]::Delete($temporary) } }
 }
 
+function Get-RepositoryApiBase($Config) {
+    $uri = [uri]$Config.repositoryUrl
+    $parts = @($uri.AbsolutePath.Trim('/').Split('/'))
+    if ($uri.Scheme -cne 'https' -or $uri.Host -cne 'dev.azure.com' -or $parts.Count -ne 4 -or $parts[2] -cne '_git') {
+        throw 'repositoryUrl must be an Azure DevOps URL in organization/project/_git/repository form.'
+    }
+    $organization = [uri]::EscapeDataString($parts[0])
+    $project = [uri]::EscapeDataString([uri]::UnescapeDataString($parts[1]))
+    $repository = [uri]::EscapeDataString([uri]::UnescapeDataString($parts[3]))
+    return "https://dev.azure.com/$organization/$project/_apis/git/repositories/$repository"
+}
+
 function Get-RepositorySnapshot($Config, [hashtable]$Headers, [string[]]$Databases, [string]$CachePath) {
-    $base = 'https://dev.azure.com/BETSoftwareO365/SyX%20SSDT/_apis/git/repositories/' + $Config.repositoryId
-    $refs = Invoke-ReadApi "$base/refs?filter=heads/master&api-version=7.1" $Headers
-    $ref = @($refs.value | Where-Object { $_.name -ceq 'refs/heads/master' })
-    if ($ref.Count -ne 1) { throw 'Exactly one master ref was not returned' }
+    $base = Get-RepositoryApiBase $Config
+    $repository = Invoke-ReadApi "$base?api-version=7.1" $Headers
+    $repositoryPath = @(([uri]$Config.repositoryUrl).AbsolutePath.Trim('/').Split('/'))
+    if ([string]$repository.name -cne [uri]::UnescapeDataString($repositoryPath[3]) -or -not $repository.id) { throw 'Azure DevOps repository identity does not match repositoryUrl.' }
+    $refs = Invoke-ReadApi "$base/refs?filter=heads/$($Config.approvedBranch)&api-version=7.1" $Headers
+    $branchRef = 'refs/heads/' + [string]$Config.approvedBranch
+    $ref = @($refs.value | Where-Object { $_.name -ceq $branchRef })
+    if ($ref.Count -ne 1) { throw "Exactly one $branchRef ref was not returned" }
     $commit = [string]$ref[0].objectId
-    if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid master commit ID' }
+    if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'Invalid repository commit ID' }
     $tree = Invoke-ReadApi "$base/items?recursionLevel=Full&versionDescriptor.versionType=commit&versionDescriptor.version=$commit&api-version=7.1" $Headers
     if ($null -eq $tree.PSObject.Properties['value']) { throw 'Invalid repository tree response' }
     $artifacts = New-Object 'System.Collections.Generic.List[object]'
@@ -61,10 +75,12 @@ function Get-RepositorySnapshot($Config, [hashtable]$Headers, [string[]]$Databas
     foreach ($database in $Databases) {
         $mapping = @($Config.databaseFolderMappings | Where-Object { $_.database -ceq $database })
         $folder = if ($mapping.Count -eq 1) { [string]$mapping[0].folder } else { '/' + $database }
+        if ($folder -ne '/') { $folder = $folder.TrimEnd('/') }
         # Exact folder match only; never fuzzy-map a different database.
-        $exists = @($tree.value | Where-Object { $_.path -ceq $folder -and (Get-Value $_ 'isFolder' $false) }).Count -eq 1
+        $exists = ($folder -eq '/') -or (@($tree.value | Where-Object { $_.path -ceq $folder -and (Get-Value $_ 'isFolder' $false) }).Count -eq 1)
         if (-not $exists) { $scopes[$database] = @{ Complete = $false; Reason = 'Exact database folder missing; configure mapping'; Folder = $folder }; continue }
-        $items = @($tree.value | Where-Object { $_.path.StartsWith($folder + '/', [StringComparison]::Ordinal) -and $_.path.EndsWith('.sql', [StringComparison]::OrdinalIgnoreCase) -and -not (Get-Value $_ 'isFolder' $false) } | Sort-Object path)
+        $prefix = if ($folder -eq '/') { '/' } else { $folder + '/' }
+        $items = @($tree.value | Where-Object { $_.path.StartsWith($prefix, [StringComparison]::Ordinal) -and $_.path.EndsWith('.sql', [StringComparison]::OrdinalIgnoreCase) -and -not (Get-Value $_ 'isFolder' $false) } | Sort-Object path)
         $complete = $items.Count -gt 0
         foreach ($item in $items) {
             $blob = [string]$item.objectId
@@ -90,7 +106,7 @@ function Get-RepositorySnapshot($Config, [hashtable]$Headers, [string[]]$Databas
         }
         $scopes[$database] = @{ Complete = $complete; Folder = $folder; Files = $items.Count; Reason = if ($complete) { 'All SQL files in folder read' } else { 'Repository indexing incomplete or empty; next run continues using immutable blob cache' } }
     }
-    return @{ Commit = $commit; RetrievedAtUtc = [DateTime]::UtcNow.ToString('o'); Scopes = $scopes; Artifacts = $artifacts.ToArray() }
+    return @{ RepositoryId=[string]$repository.id; RepositoryName=[string]$repository.name; Branch=$branchRef; Commit = $commit; RetrievedAtUtc = [DateTime]::UtcNow.ToString('o'); Scopes = $scopes; Artifacts = $artifacts.ToArray() }
 }
 
 function Resolve-JiraFieldMap($Config, [hashtable]$Headers) {

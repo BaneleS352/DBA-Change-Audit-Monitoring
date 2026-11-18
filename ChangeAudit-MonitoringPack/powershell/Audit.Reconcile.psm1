@@ -137,4 +137,13 @@ function Get-OverallStatus([string]$Repository, [string]$Rab, [datetime]$EventUt
     if ($rabGap) { return 'RabException' }
     return 'NeedsReview'
 }
+
+function Get-RepositoryOverallStatus([string]$Repository, [datetime]$EventUtc, [int]$GraceMinutes, [datetime]$NowUtc=[DateTime]::UtcNow) {
+    if ($EventUtc.Kind -eq [DateTimeKind]::Local) { $EventUtc=$EventUtc.ToUniversalTime() }
+    if ($NowUtc.Kind -eq [DateTimeKind]::Local) { $NowUtc=$NowUtc.ToUniversalTime() }
+    if (($NowUtc-$EventUtc).TotalMinutes -lt $GraceMinutes) { return 'Pending' }
+    if ($Repository -eq 'Matched') { return 'RepositoryMatch' }
+    if ($Repository -in @('Different','NotFound')) { return 'RepositoryException' }
+    return 'NeedsReview'
+}
 Export-ModuleMember -Function *

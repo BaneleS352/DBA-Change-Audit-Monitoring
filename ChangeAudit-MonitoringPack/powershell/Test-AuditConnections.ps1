@@ -23,21 +23,13 @@ SELECT TOP(0) LogId,DatabaseName,EventType,SchemaName,ObjectName,ObjectType,SqlC
 try{
  Initialize-SqlParser $config.scriptDomPath;$report.ScriptDom='OK'
  $headers=New-ReadHeaders $config.credentialPath
- $base='https://dev.azure.com/BETSoftwareO365/SyX%20SSDT/_apis/git/repositories/'+$config.repositoryId
- $refs=Invoke-ReadApi "$base/refs?filter=heads/master&api-version=7.1" $headers.Azure
- $report.Master=@($refs.value | Where-Object name -CEQ 'refs/heads/master' | Select-Object name,objectId)
- $mapping=Resolve-JiraFieldMap $config $headers.Jira;$report.JiraFieldMappings=$mapping
- $filter=Invoke-ReadApi ($config.rabSource.baseUrl+'/rest/api/3/filter/'+$config.rabSource.filterId) $headers.Jira
- $report.JiraFilter=@{Id=$filter.id;Name=$filter.name;Jql=$filter.jql}
- # Read configured representative releases to expose Jira account IDs for deliberate policy configuration.
- $people=@()
- foreach($key in $config.rabSource.sampleIssueKeys){
-  $issue=Invoke-ReadApi ($config.rabSource.baseUrl+'/rest/api/3/issue/'+$key+'?fields='+[uri]::EscapeDataString(($mapping.rabApprover+','+$mapping.rabApprovers))) $headers.Jira
-  foreach($field in @($mapping.rabApprover,$mapping.rabApprovers)){
-   foreach($person in @(Get-Value $issue.fields $field @())){if($null -ne $person){$people += [pscustomobject]@{Issue=$key;Name=$person.displayName;AccountId=$person.accountId}}}
-  }
- }
- $report.ObservedApprovers=$people
+ $base=Get-RepositoryApiBase $config
+ $repository=Invoke-ReadApi "$base?api-version=7.1" $headers.Azure
+ $refs=Invoke-ReadApi "$base/refs?filter=heads/$($config.approvedBranch)&api-version=7.1" $headers.Azure
+ $branch='refs/heads/'+$config.approvedBranch
+ $branchRows=@($refs.value | Where-Object name -CEQ $branch | Select-Object name,objectId)
+ if($branchRows.Count -ne 1){throw "Exactly one $branch ref was not returned"}
+ $report.Repository=@{Id=$repository.id;Name=$repository.name;Branch=$branchRows}
 }catch{$report.External=@{Error=$_.Exception.Message}}
 Write-AtomicJson $ReportPath $report
-Write-Output "Read-only connection report saved to $ReportPath. It contains field/account IDs, not credentials. Review before scheduling."
+Write-Output "Read-only connection report saved to $ReportPath. It contains connection status, not credentials. Review before scheduling."

@@ -1,14 +1,13 @@
-# Validation record — 2026-09-16 update
+# Validation status
 
-Approval validity has moved to manual DBA review. The allowlist, authorization test, approval-text classification and automatic before/after approval verdict are removed.
+The 2026-09-16 validation record applies to the earlier SSDT_SA/Jira implementation and does not validate the Affiliates.Database/main changes made in this phase.
 
-Current validation:
-- Test-Audit.ps1: 51 passing assertions.
-- Test-Sources.ps1: 12 mocked API assertions.
-- Test-Collection.ps1: 9 mocked source-collection assertions.
-- JavaScript syntax, configuration JSON and SQL/PowerShell parse checks pass.
-- Tests verify that an unlisted recorded approver is displayed, raw negative/late comments are preserved, timestamps are shown without validity decisions, and linked evidence never becomes an automatic approval.
+The current changes have not been tested. Before enabling collection, validate:
 
-The earlier 2026-09-15 approval-policy assertions are superseded. Existing offline source/API limitations in RUNBOOK.md still apply. No live credentials or SQL connections were used in these tests.
+- Azure DevOps Code Read access, repository identity, and `refs/heads/main` using the connection report.
+- The root-folder mapping against the repository's actual deployable SQL layout; update `databaseFolderMappings` if definitions live below root.
+- SQL procedure deployment, including the optional database filter parameters, and SentryOne EXECUTE permissions.
+- Source read permissions, indexes, trigger coverage, retention, central SQL, and IIS/JSON ACLs.
+- An end-to-end canary using existing authorized events, confirming captured SQL, object identity, comparison result, pinned commit, and SAST time display.
 
-The user reported a successful host check on 2026-09-16; the exact script/result has not yet been identified, so this is not counted as full live-canary verification.
+The monitor does not create SQL events or write repository changes as part of validation. Keep the SQL Agent schedule disabled until live checks and DBA review are complete.
